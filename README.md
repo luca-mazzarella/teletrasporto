@@ -32,8 +32,26 @@ Opzioni utili:
 - `--camera 1` usa un'altra webcam (oppure un file video)
 - `--proc-width 640` più fluido su PC lenti
 - `--output video.mp4` registra il risultato
-- `--virtual-cam` invia l'output a una webcam virtuale (Zoom, Meet, OBS, Discord) — richiede `pip install pyvirtualcam`
-  e OBS installato (Windows/macOS) oppure `v4l2loopback` (Linux)
+- `--virtual-cam` invia l'output a una webcam virtuale per Teams, Zoom, Meet, Discord (vedi sotto)
+
+## Usarlo su Microsoft Teams (o Zoom, Meet)
+Il programma crea una **webcam virtuale** che in Teams scegli al posto di quella vera.
+
+1. Installa [OBS Studio](https://obsproject.com/) (gratuito). Aprilo una volta, premi
+   **Avvia fotocamera virtuale** (su macOS consenti l'estensione di sistema se richiesto), poi chiudi OBS.
+2. `pip install pyvirtualcam`
+3. Avvia il programma **prima** della chiamata:
+   ```bash
+   python teletrasporto.py --virtual-cam
+   ```
+4. In Teams: **Impostazioni → Dispositivi → Fotocamera → "OBS Virtual Camera"**
+   (o dal menu della fotocamera durante la chiamata). Se non compare, chiudi e riapri Teams.
+5. Tieni aperta la finestra del programma: è lì che premi `b`, `d`, `q`.
+
+Note:
+- L'anteprima in Teams può sembrarti specchiata: è normale, gli altri ti vedono dritto.
+- Disattiva gli sfondi/sfocatura di Teams, altrimenti si sovrappongono all'effetto.
+- Su un PC aziendale l'installazione di OBS o dell'estensione di sistema può essere bloccata: in quel caso serve l'IT.
 
 ## Come funziona
 - **MediaPipe Hand Landmarker** → controlla che indice e medio siano tesi e uniti, anulare e mignolo piegati.

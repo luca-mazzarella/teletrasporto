@@ -358,7 +358,7 @@ def parse_args():
                     help="larghezza a cui elaborare i frame (più bassa = più fluido)")
     ap.add_argument("--no-mirror", action="store_true", help="non specchiare l'immagine")
     ap.add_argument("--virtual-cam", action="store_true",
-                    help="invia l'output a una webcam virtuale (pyvirtualcam) per Zoom/Meet/OBS")
+                    help="invia l'output a una webcam virtuale (pyvirtualcam) per Teams/Zoom/Meet")
     ap.add_argument("--output", help="salva anche il risultato in un file video (.mp4)")
     ap.add_argument("--headless", action="store_true", help="nessuna finestra (per test)")
     return ap.parse_args()
@@ -390,9 +390,16 @@ def main():
 
     vcam = None
     if args.virtual_cam:
-        import pyvirtualcam
-        vcam = pyvirtualcam.Camera(width=w, height=h, fps=int(fps))
-        print(f"Webcam virtuale attiva: {vcam.device}")
+        try:
+            import pyvirtualcam
+            vcam = pyvirtualcam.Camera(width=w, height=h, fps=int(fps))
+        except ImportError:
+            sys.exit("Per --virtual-cam installa pyvirtualcam:  pip install pyvirtualcam")
+        except RuntimeError as err:
+            sys.exit(f"Webcam virtuale non disponibile: {err}\n"
+                     "Su macOS e Windows installa OBS Studio e avvia una volta "
+                     "'Avvia fotocamera virtuale', poi chiudi OBS e riprova.")
+        print(f"Webcam virtuale attiva: {vcam.device} (selezionala in Teams/Zoom/Meet)")
     writer = None
     if args.output:
         writer = cv2.VideoWriter(args.output, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
@@ -424,7 +431,10 @@ def main():
         out = render(frame, mask, bgm.filled(), p, tick, rng) if p > 0 else frame.copy()
 
         if vcam is not None:
-            vcam.send(cv2.cvtColor(out, cv2.COLOR_BGR2RGB))
+            # le app di videochiamata vogliono l'immagine non specchiata (la specchiano
+            # loro solo nella tua anteprima), altrimenti gli altri ti vedono al contrario
+            sent = out if args.no_mirror or is_file else cv2.flip(out, 1)
+            vcam.send(cv2.cvtColor(sent, cv2.COLOR_BGR2RGB))
         if writer is not None:
             writer.write(out)
 
