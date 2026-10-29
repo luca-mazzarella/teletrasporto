@@ -14,8 +14,11 @@ Tasti:
 """
 import argparse
 import os
+import shutil
+import ssl
 import sys
 import time
+import urllib.error
 import urllib.request
 
 import cv2
@@ -45,9 +48,36 @@ def ensure_model(key):
     name, path = MODELS[key]
     os.makedirs(MODEL_DIR, exist_ok=True)
     dest = os.path.join(MODEL_DIR, name)
-    if not os.path.exists(dest):
-        print(f"Scarico il modello {name}...")
-        urllib.request.urlretrieve(MODEL_BASE + path, dest)
+    if os.path.exists(dest):
+        return dest
+    url = MODEL_BASE + path
+    print(f"Scarico il modello {name}...")
+    ctx = ssl.create_default_context()  # rispetta SSL_CERT_FILE se impostata
+    if not os.environ.get("SSL_CERT_FILE"):
+        try:
+            # certifi porta i certificati con sé: serve sul Python di python.org per macOS,
+            # che altrimenti non trova quelli di sistema
+            import certifi
+            ctx.load_verify_locations(cafile=certifi.where())
+        except ImportError:
+            pass
+    tmp = dest + ".part"
+    try:
+        with urllib.request.urlopen(url, context=ctx, timeout=60) as resp, open(tmp, "wb") as out:
+            shutil.copyfileobj(resp, out)
+        os.replace(tmp, dest)
+    except (urllib.error.URLError, OSError) as err:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        sys.exit(
+            f"\nImpossibile scaricare {name}: {err}\n\n"
+            "Possibili soluzioni:\n"
+            "  - macOS con Python di python.org: esegui 'Install Certificates.command'\n"
+            "    (in /Applications/Python 3.x/), poi riprova.\n"
+            "  - Rete aziendale con proxy che ispeziona HTTPS: imposta SSL_CERT_FILE\n"
+            "    sul certificato della tua azienda, poi riprova.\n"
+            f"  - Oppure scarica a mano il file e mettilo in {MODEL_DIR}/:\n    {url}"
+        )
     return dest
 
 
